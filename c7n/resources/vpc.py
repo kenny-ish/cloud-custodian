@@ -2941,19 +2941,30 @@ class EndpointServiceDetailsFilter(ValueFilter):
         client = local_session(self.manager.session_factory).client("ec2")
         current_region = self.manager.config.region
 
+        named_resources = []
+        for resource in resources:
+            if not resource.get("ServiceName"):
+                self.log.warning(
+                    "Skipping VPC endpoint %s (type=%s) with no ServiceName",
+                    resource.get("VpcEndpointId"),
+                    resource.get("VpcEndpointType"),
+                )
+                continue
+            named_resources.append(resource)
+
         # Group unique service names by ServiceRegion, which is set directly on
         # each endpoint and correctly identifies cross-region endpoints without
         # any string parsing. Falls back to current region for older endpoints
         # that pre-date the ServiceRegion field.
         regional_groups = {}
-        for r in resources:
-            region = r.get("ServiceRegion", current_region)
-            regional_groups.setdefault(region, set()).add(r["ServiceName"])
+        for resource in named_resources:
+            region = resource.get("ServiceRegion", current_region)
+            regional_groups.setdefault(region, set()).add(resource["ServiceName"])
 
         service_map = self._describe_services(client, regional_groups, current_region)
 
         results = []
-        for resource in resources:
+        for resource in named_resources:
             service_detail = service_map.get(resource["ServiceName"], {})
             resource[self.annotation_key] = service_detail or {}
 

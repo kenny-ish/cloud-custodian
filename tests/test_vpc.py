@@ -4832,6 +4832,28 @@ class TestVpcEndpointServiceDetails(BaseTest):
         self.assertEqual(describe_args[1], {"us-east-1": {service_name}})
         self.assertEqual(describe_args[2], "us-east-1")
 
+    def test_endpoint_service_details_missing_service_name_is_skipped(self):
+        service_filter = self.get_filter()
+        service_filter.manager.session_factory = MagicMock()
+        service_filter.manager.session_factory.region = "us-east-1"
+        service_name = "com.amazonaws.us-east-1.s3"
+        service_filter._describe_services = MagicMock(return_value={
+            service_name: {"VpcEndpointPolicySupported": True}
+        })
+        unnamed_endpoint = {
+            "VpcEndpointId": "vpce-resource",
+            "VpcEndpointType": "Resource",
+        }
+        named_endpoint = {"VpcEndpointId": "vpce-s3", "ServiceName": service_name}
+
+        resources = service_filter.process([unnamed_endpoint, named_endpoint])
+
+        self.assertEqual(resources, [named_endpoint])
+        self.assertNotIn(service_filter.annotation_key, unnamed_endpoint)
+        describe_args = service_filter._describe_services.call_args.args
+        self.assertEqual(describe_args[1], {"us-east-1": {service_name}})
+        self.assertEqual(describe_args[2], "us-east-1")
+
     def test_endpoint_service_details_policy_supported(self):
         session_factory = self.replay_flight_data(
             "test_vpc_endpoint_service_details_filter"
