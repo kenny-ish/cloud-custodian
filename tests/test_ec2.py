@@ -1360,6 +1360,13 @@ class TestTag(BaseTest):
 
 class TestStop(BaseTest):
 
+    def test_ec2_stop_storage_classification_uses_root_device_type(self):
+        instance = {
+            'RootDeviceType': 'ebs',
+            'BlockDeviceMappings': [{'DeviceName': '/dev/sda2'}],
+        }
+        self.assertFalse(ec2.EphemeralInstanceFilter.is_ephemeral(instance))
+
     def test_ec2_stop(self):
         session_factory = self.replay_flight_data("test_ec2_stop")
         policy = self.load_policy(

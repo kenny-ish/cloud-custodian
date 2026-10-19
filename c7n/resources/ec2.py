@@ -802,6 +802,8 @@ class EphemeralInstanceFilter(Filter):
 
     @staticmethod
     def is_ephemeral(i):
+        if i.get('RootDeviceType'):
+            return i['RootDeviceType'] == 'instance-store'
         for bd in i.get('BlockDeviceMappings', []):
             if bd['DeviceName'] in ('/dev/sda1', '/dev/xvda', 'xvda'):
                 if 'Ebs' in bd:
